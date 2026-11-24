@@ -2,8 +2,14 @@
 
 // Número WhatsApp de TecRural con prefijo de país, sin "+" ni espacios.
 // Se puede sobrescribir con la variable de entorno VITE_WHATSAPP_NUMBER.
+const WHATSAPP_DEFECTO = "34600000000"; // marcador: TecRural aún sin número propio
+
 export const WHATSAPP_NUMBER =
-  (import.meta.env.VITE_WHATSAPP_NUMBER || "34600000000").replace(/\D/g, "");
+  (import.meta.env.VITE_WHATSAPP_NUMBER || WHATSAPP_DEFECTO).replace(/\D/g, "");
+
+// false mientras el número sea el marcador: el modal avisa y desactiva el
+// enlace directo a WhatsApp hasta que haya uno real.
+export const WHATSAPP_CONFIGURADO = WHATSAPP_NUMBER !== WHATSAPP_DEFECTO;
 
 // Si se define, cada lead se envía también por POST (Formspree, Supabase, Google Sheets...).
 export const LEAD_ENDPOINT = import.meta.env.VITE_LEAD_ENDPOINT || "";

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { WHATSAPP_NUMBER } from "../config.js";
+import { WHATSAPP_CONFIGURADO } from "../config.js";
 import { Button } from "./fields.jsx";
 import { guardarLead, resumenWhatsApp, whatsappLink } from "../lib/lead.js";
 import { telefonoValido, normalizarTelefono } from "../lib/format.js";
@@ -84,15 +84,15 @@ export default function LeadModal({ res, onClose }) {
               ¡Listo! Te escribimos en 24h con tu revisión.
             </h2>
             <p className="mt-3 text-[18px]">Mientras, guarda tu PDF.</p>
-            {WHATSAPP_NUMBER === "34600000000" ? (
-              <p className="mt-4 rounded-[14px] bg-lima-claro p-4 text-[16px] font-semibold text-deep">
-                El enlace directo a WhatsApp se activará cuando TecRural configure su número.
-              </p>
-            ) : (
+            {WHATSAPP_CONFIGURADO ? (
               <p className="mt-4">
                 <Button variant="whatsapp" href={link} target="_blank" rel="noopener noreferrer" className="mt-0">
                   Abrir WhatsApp con mi resumen
                 </Button>
+              </p>
+            ) : (
+              <p className="mt-4 rounded-[14px] bg-lima-claro p-4 text-[16px] font-semibold text-deep">
+                El enlace directo a WhatsApp se activará cuando TecRural configure su número.
               </p>
             )}
             <Button variant="secondary" onClick={onClose} className="mt-3">
