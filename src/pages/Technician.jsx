@@ -50,7 +50,8 @@ const GRUPOS = [
       ["percolacion", "Ahorro de agua con sensores", ""],
       ["recuperacion", "Producción recuperada al medir", ""],
       ["costeAgua", "Coste del agua", "€/m³"],
-      ["costeKit", "Coste del kit", "€/ha"],
+      ["costeKitInicial", "Coste inicial del kit", "€"],
+      ["cuotaKit", "Cuota mensual del kit", "€/mes"],
     ],
   },
 ];
@@ -75,7 +76,8 @@ const ESCALA = {
   percolacion: 0.01,
   recuperacion: 0.05,
   costeAgua: 0.01,
-  costeKit: 10,
+  costeKitInicial: 5,
+  cuotaKit: 1,
 };
 
 // Rangos recomendados por supuesto: evitan valores sin sentido (negativos,
@@ -100,7 +102,8 @@ const RANGOS = {
   percolacion: [0, 0.6],
   recuperacion: [0, 1],
   costeAgua: [0, 3],
-  costeKit: [0, 5000],
+  costeKitInicial: [0, 500],
+  cuotaKit: [0, 100],
 };
 
 export default function Technician() {

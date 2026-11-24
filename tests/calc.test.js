@@ -61,7 +61,11 @@ describe("Ejemplo de validación del pliego (Vélez-Málaga, 3 ha, Adulto, ON)",
     cerca(eco.kgRecuperados, 163.4, 0.2);
     expect(eco.eurosRecuperados).toBeCloseTo(eco.kgRecuperados * 2.5, 6);
     expect(eco.ahorroTotal).toBeCloseTo(eco.ahorroEurosAgua + eco.eurosRecuperados, 6);
-    cerca(eco.paybackMeses, 20.9, 0.1);
+    // Tarifa real: el ahorro bruto de la finca (3 ha) menos la cuota anual (168 €)
+    // amortiza los 30 € de señal en menos de un mes.
+    cerca(eco.ahorroFinca, 1464.7, 1);
+    cerca(eco.ahorroNetoFinca, 1296.7, 1);
+    cerca(eco.paybackMeses, 0.28, 0.05);
   });
 
   it("Semáforo: déficit del 86 % es 'muy alto' -> rojo aunque el payback sea de 21 meses", () => {
@@ -71,9 +75,10 @@ describe("Ejemplo de validación del pliego (Vélez-Málaga, 3 ha, Adulto, ON)",
     expect(res.avisos.some((x) => x.includes("más de la mitad"))).toBe(true);
   });
 
-  it("totales de finca multiplican por hectáreas", () => {
+  it("totales de finca: el riesgo multiplica por hectáreas; el kit es por finca", () => {
     expect(res.totales.eurosRiesgo).toBeCloseTo(26250, 4);
-    expect(res.totales.costeKit).toBeCloseTo(2550, 6);
+    expect(res.totales.costeKitInicial).toBe(30);
+    expect(res.totales.cuotaAnual).toBe(168);
   });
 });
 
@@ -114,11 +119,11 @@ describe("Resto de la lógica", () => {
   it("semáforo por payback con déficit bajo: verde <=12, amarillo 12-24, rojo >24", () => {
     const c = core(rExceso, base);
     const cOpt = core(rExceso, base, Math.min(c.necesidadBruta, rExceso.dotacion));
-    const ecoKit = (kit) => economia(c, rExceso, { ...base, costeKit: kit }, cOpt);
+    const ecoKit = (inicial) => economia(c, rExceso, { ...base, costeKitInicial: inicial }, cOpt);
     expect(c.pctDeficit).toBeLessThan(base.deficitCritico);
     expect(ecoKit(100).semaforo).toBe("verde");
-    expect(ecoKit(5000).semaforo).toBe("amarillo");
-    expect(ecoKit(20000).semaforo).toBe("rojo");
+    expect(ecoKit(10000).semaforo).toBe("amarillo");
+    expect(ecoKit(30000).semaforo).toBe("rojo");
   });
 
   it("déficit muy alto fuerza rojo aunque el payback sea bueno (regla del pliego)", () => {
@@ -128,18 +133,22 @@ describe("Resto de la lógica", () => {
     expect(bajo.eco.semaforo).toBe("rojo");
   });
 
-  it("el semáforo discrimina con el kit estándar: verde, amarillo y rojo son alcanzables", () => {
-    // Riega de más con dotación de sobra: los sensores ahorran agua -> verde.
+  it("el semáforo discrimina con la tarifa real: verde y rojo son alcanzables", () => {
+    // Riega de más con dotación de sobra: el ahorro va muy sobrado para la cuota -> verde.
     const verde = calculate(rExceso);
     expect(verde.eco.paybackMeses).toBeLessThan(12);
     expect(verde.eco.semaforo).toBe("verde");
-    // Equilibrado: aprovecha casi toda la dotación, poco margen de mejora -> amarillo.
-    const amarillo = calculate(rEquilibrio);
-    expect(amarillo.c.pctDeficit).toBeLessThan(amarillo.a.deficitCritico);
-    cerca(amarillo.eco.paybackMeses, 20.6, 0.5);
-    expect(amarillo.eco.semaforo).toBe("amarillo");
+    // El ahorro no llega ni a la cuota anual (168 EUR): no se amortiza nunca -> rojo
+    // (sin que el umbral de déficit crítico dispare el rojo: aquí déficit < 50 %).
+    const corto = calculate(rExceso, { percolacion: 0.005, recuperacion: 0.005 });
+    expect(corto.c.pctDeficit).toBeLessThan(0.5);
+    expect(corto.eco.ahorroNetoFinca).toBeLessThan(0);
+    expect(corto.eco.paybackMeses).toBe(Infinity);
+    expect(corto.eco.semaforo).toBe("rojo");
     // Por defecto (dotación 4.000, riego escaso): déficit estructural -> rojo.
     expect(calculate(DEFAULT_INPUTS).eco.semaforo).toBe("rojo");
+    // El amarillo (ahorro neto muy justo, 12-24 meses de señal) queda cubierto en
+    // las bandas unitarias de arriba: con la agronomía actual casi no se da en UI.
   });
 
   it("sin dotación, el escenario B no promete agua que no hay", () => {
@@ -149,6 +158,15 @@ describe("Resto de la lógica", () => {
     expect(B.eurosRiesgo).toBeCloseTo(A.eurosRiesgo, 6);
     expect(B.ahorroEuros).toBe(0);
     expect(B.descripcion).toContain("revisar el agua");
+  });
+
+  it("la cuota mensual se resta antes de amortizar la señal (tarifa real)", () => {
+    const res = calculate(EJEMPLO_LANDING);
+    const neto = res.eco.ahorroFinca - res.a.cuotaKit * 12;
+    expect(res.eco.paybackMeses).toBeCloseTo(res.a.costeKitInicial / (neto / 12), 6);
+    // Sin cuota que restar el payback sería cero: aquí prueba que la cuota cuenta.
+    const sinCuota = calculate(EJEMPLO_LANDING, { cuotaKit: 0 });
+    expect(sinCuota.eco.paybackMeses).toBeLessThan(res.eco.paybackMeses);
   });
 
   it("los sensores no recuperan más de lo que el calendario óptimo arregla", () => {
@@ -179,9 +197,14 @@ describe("Resto de la lógica", () => {
       expect(res.crop.id).toBe(id);
       expect(res.c.necesidadBruta).toBeGreaterThan(0);
       expect(res.c.aguaAplicada).toBeGreaterThan(0);
-      expect(Number.isFinite(res.eco.paybackMeses)).toBe(true);
     }
+    // Con la tarifa real (30 EUR + 14 EUR/mes), el ahorro por defecto de mango
+    // (solo agua, 78 EUR/año en 2,5 ha) no llega a la cuota de 168 EUR/año:
+    // el kit no se amortiza nunca y el semaforo es rojo.
     const mango = calculate({ ...DEFAULT_INPUTS, cultivo: "mango" });
+    expect(mango.eco.ahorroNetoFinca).toBeLessThan(0);
+    expect(mango.eco.paybackMeses).toBe(Infinity);
+    expect(mango.eco.semaforo).toBe("rojo");
     expect(mango.c.kc).toBeCloseTo(0.9, 10);
     expect(mango.a.arbolesHa).toBe(156);
     const chiri = calculate({ ...DEFAULT_INPUTS, cultivo: "chirimoya" });
@@ -196,7 +219,7 @@ describe("Resto de la lógica", () => {
   });
 
   it("enlace de supuestos: codifica y decodifica", () => {
-    const o = { kcBase: 0.75, costeKit: 1200 };
+    const o = { kcBase: 0.75, cuotaKit: 12 };
     expect(decodeOverrides(encodeOverrides(o))).toEqual(o);
     expect(decodeOverrides(encodeOverrides({ deficitCritico: 0.3 }))).toEqual({ deficitCritico: 0.3 });
     expect(decodeOverrides("basura")).toEqual({});

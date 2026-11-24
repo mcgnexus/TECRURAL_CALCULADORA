@@ -77,8 +77,9 @@ export default function Result() {
           <Numero etiqueta="Lo que ahorras con sensores" valor={`${eur(eco.ahorroMin)} - ${eur(eco.ahorroMax)}`} unidad="al año por ha" color="text-water" />
         </div>
         <p className="mt-2 text-[15px] text-gray-500">
-          En toda la finca: {eur(res.totales.eurosRiesgo)} en riesgo · ahorro de {eur(res.totales.ahorroMin)} a{" "}
-          {eur(res.totales.ahorroMax)} · kit {eur(res.totales.costeKit)}.
+          Por hectárea: {eur(c.eurosRiesgo)} en riesgo y un ahorro de {eur(res.totales.ahorroMin)} a{" "}
+          {eur(res.totales.ahorroMax)} al año. El kit cuesta {eur(res.totales.costeKitInicial)} al instalarla más{" "}
+          {eur(res.totales.cuotaAnual)} al año en toda la finca.
         </p>
 
         {/* AGUA (secundario, pequeño) */}
@@ -165,7 +166,7 @@ export default function Result() {
             <Sup nombre="Semanas de riego al año" valor={n0(a.semanasRiego)} />
             <Sup nombre="Goteo que aprovecha el árbol" valor={`${n0(a.eficiencia * 100)} %`} />
             <Sup nombre="Precio del agua" valor={`${n2(a.costeAgua)} €/m³`} />
-            <Sup nombre="Precio del kit de sensores" valor={`${eur(a.costeKit)}/ha`} />
+            <Sup nombre="Kit de sensores" valor={`${eur(a.costeKitInicial)} + ${eur(a.cuotaKit)}/mes`} />
             <Sup nombre="Déficit a partir del cual el kit no es la solución" valor={`${n0(a.deficitCritico * 100)} %`} />
             <Sup nombre="Suelo supuesto" valor="Franco" />
           </dl>
@@ -315,7 +316,7 @@ function PrintArea({ res, municipio }) {
       {fila("Aprovechamiento del goteo", `${n0(a.eficiencia * 100)} %`)}
       {fila("Suelo supuesto", "Franco")}
       {fila("Precio del agua", `${n2(a.costeAgua)} €/m³`)}
-      {fila("Kit de sensores", `${eur(a.costeKit)}/ha`)}
+      {fila("Kit de sensores", `${eur(a.costeKitInicial)} al instalar + ${eur(a.cuotaKit)}/mes`)}
       {fila("Déficit a partir del cual el kit no es la solución", `${n0(a.deficitCritico * 100)} %`)}
       {res.crop.origen === "referencia" &&
         fila("Aviso", "Los datos de referencia de este cultivo están pendientes de revisión técnica.")}

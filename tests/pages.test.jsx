@@ -38,7 +38,7 @@ describe("Las páginas renderizan sin errores", () => {
   }
 
   it("portada, panel técnico y app completa", () => {
-    const value = ctx(DEFAULT_INPUTS, { kcBase: 0.75, costeKit: 1200 });
+    const value = ctx(DEFAULT_INPUTS, { kcBase: 0.75, cuotaKit: 12 });
     expect(render(<AppCtx.Provider value={value}><Landing /></AppCtx.Provider>)).toContain("¿Cuánto dinero pierdes por regar a ojo?");
     const tec = render(<AppCtx.Provider value={value}><Technician /></AppCtx.Provider>);
     expect(tec).toContain("Generar enlace con estos supuestos");

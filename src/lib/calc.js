@@ -65,7 +65,10 @@ export function defaultAssumptions(cropId = "aguacate", municipioId = "velez") {
     percolacionMax: 0.25,
     recuperacion: 0.4,
     costeAgua: 0.35,
-    costeKit: 850,
+    // Tarifa real TecRural, por finca (el pliego asumía 850 €/ha como pago único):
+    // 30 € al instalar la señal + 14 €/mes de cuota.
+    costeKitInicial: 30,
+    cuotaKit: 14,
   };
 }
 
@@ -205,7 +208,14 @@ export function economia(c, r, a, cOptimo) {
   const ahorroTotal = ahorroEurosAgua + eurosRecuperados;
   const ahorroMin = ahorroTotal * 0.8;
   const ahorroMax = ahorroTotal * 1.2;
-  const paybackMeses = ahorroTotal > 0 ? a.costeKit / (ahorroTotal / 12) : Infinity;
+  // Tarifa real (por finca): 30 € de señal + cuota mensual. El ahorro neto es el
+  // bruto de toda la finca menos la cuota anual; el payback son los meses de
+  // ahorro neto que tardan en cubrir la señal inicial. Si el ahorro no llega a
+  // la cuota, el kit no se amortiza nunca.
+  const ahorroFinca = ahorroTotal * r.hectareas;
+  const cuotaAnual = a.cuotaKit * 12;
+  const ahorroNetoFinca = ahorroFinca - cuotaAnual;
+  const paybackMeses = ahorroNetoFinca > 0 ? a.costeKitInicial / (ahorroNetoFinca / 12) : Infinity;
   const semaforo = deficitMuyAlto(c, a)
     ? "rojo"
     : paybackMeses <= 12
@@ -221,6 +231,9 @@ export function economia(c, r, a, cOptimo) {
     ahorroTotal,
     ahorroMin,
     ahorroMax,
+    ahorroFinca,
+    ahorroNetoFinca,
+    cuotaAnual,
     paybackMeses,
     semaforo,
   };
@@ -269,7 +282,7 @@ export function escenarios(r, a, c, eco, cOptimo) {
       ahorroM3: Math.max(0, c.aguaAplicada - cB.aguaAplicada),
     }),
     mk("C", "Con sensores", "Mides suelo y clima y riegas justo, con aviso en el móvil.", c, ecoC, {
-      costeKit: a.costeKit,
+      costeKitInicial: a.costeKitInicial,
       paybackMeses: eco.paybackMeses,
       semaforo: eco.semaforo,
     }),
@@ -338,7 +351,8 @@ export function calculate(inputs, overrides = {}) {
     ahorroMin: eco.ahorroMin * r.hectareas,
     ahorroMax: eco.ahorroMax * r.hectareas,
     ahorroM3: eco.ahorroM3 * r.hectareas,
-    costeKit: a.costeKit * r.hectareas,
+    costeKitInicial: a.costeKitInicial,
+    cuotaAnual: a.cuotaKit * 12,
     deficit: c.deficit * r.hectareas,
     aguaAplicada: c.aguaAplicada * r.hectareas,
     necesidadBruta: c.necesidadBruta * r.hectareas,
